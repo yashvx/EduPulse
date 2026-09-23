@@ -40,6 +40,19 @@ import {
   updateStudent,
   deleteStudent,
 } from "../services/student";
+import {
+  createAttendance,
+  getStudentAttendance,
+} from "../services/attendance";
+import { getSubjects } from "../services/subject";
+import {
+  createAssignment,
+  getStudentAssignments,
+} from "../services/assignment";
+import {
+  createExam,
+  getStudentExams,
+} from "../services/exam";
 import { getRecommendations } from "../services/recommendations";
 import {
   getInterventions,
@@ -65,8 +78,73 @@ function Dashboard({ onLogout }) {
   const [error, setError] = useState("");
 
   // ==============================
+  // ATTENDANCE MANAGEMENT
+  // ==============================
+
+  const [attendanceStudentId, setAttendanceStudentId] = useState("");
+  const [attendanceSubjectId, setAttendanceSubjectId] = useState("");
+  const [attendanceDate, setAttendanceDate] = useState("");
+  const [attendanceStatus, setAttendanceStatus] = useState("Present");
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceSubmitting, setAttendanceSubmitting] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
+  const [attendanceMessage, setAttendanceMessage] = useState("");
+  const [subjects, setSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
+// ==============================
+// ASSIGNMENT MANAGEMENT
+// ==============================
+
+const [assignmentStudentId, setAssignmentStudentId] = useState("");
+const [assignmentSubjectId, setAssignmentSubjectId] = useState("");
+const [assignmentTitle, setAssignmentTitle] = useState("");
+const [assignmentDueDate, setAssignmentDueDate] = useState("");
+const [assignmentSubmitted, setAssignmentSubmitted] = useState(false);
+const [assignmentScore, setAssignmentScore] = useState("");
+const [assignmentRecords, setAssignmentRecords] = useState([]);
+const [assignmentLoading, setAssignmentLoading] = useState(false);
+const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
+const [assignmentError, setAssignmentError] = useState("");
+const [assignmentMessage, setAssignmentMessage] = useState("");
+
+// ==============================
+// EXAM MANAGEMENT
+// ==============================
+
+const [examStudentId, setExamStudentId] = useState("");
+const [examSubjectId, setExamSubjectId] = useState("");
+const [examType, setExamType] = useState("");
+const [examDate, setExamDate] = useState("");
+const [examScore, setExamScore] = useState("");
+const [examRecords, setExamRecords] = useState([]);
+const [examLoading, setExamLoading] = useState(false);
+const [examSubmitting, setExamSubmitting] = useState(false);
+const [examError, setExamError] = useState("");
+const [examMessage, setExamMessage] = useState("");
+
+  // ==============================
   // DASHBOARD ANALYTICS
   // ==============================
+
+  const loadSubjects = useCallback(async () => {
+    setSubjectsLoading(true);
+
+    try {
+      const data = await getSubjects();
+      setSubjects(data);
+      setAttendanceError("");
+    } catch (error) {
+      console.error("Subjects error:", error);
+      setSubjects([]);
+      setAttendanceError(
+        error.response?.data?.detail || "Failed to load subjects",
+      );
+    } finally {
+      setSubjectsLoading(false);
+    }
+  }, []);
 
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -840,7 +918,10 @@ function Dashboard({ onLogout }) {
             className={`sidebar-item ${
               activeSection === "attendance" ? "active" : ""
             }`}
-            onClick={() => setActiveSection("attendance")}
+            onClick={() => {
+              setActiveSection("attendance");
+              loadSubjects();
+            }}
           >
             <span>✓</span>
             Attendance
@@ -850,7 +931,10 @@ function Dashboard({ onLogout }) {
             className={`sidebar-item ${
               activeSection === "assignments" ? "active" : ""
             }`}
-            onClick={() => setActiveSection("assignments")}
+            onClick={() => {
+              setActiveSection("assignments");
+              loadSubjects();
+            }}
           >
             <span>▤</span>
             Assignments
@@ -860,7 +944,10 @@ function Dashboard({ onLogout }) {
             className={`sidebar-item ${
               activeSection === "exams" ? "active" : ""
             }`}
-            onClick={() => setActiveSection("exams")}
+            onClick={() => {
+              setActiveSection("exams");
+              loadSubjects();
+            }}
           >
             <span>▣</span>
             Exams
@@ -2098,7 +2185,860 @@ function Dashboard({ onLogout }) {
             </>
           )}
 
-          {activeSection === "recommendations" && (
+          {activeSection === "attendance" && (
+            <section className="academic-management-page">
+              <section className="students-page-header">
+                <div>
+                  <h2>Attendance Management</h2>
+                  <p>
+                    Mark attendance and review attendance history by student.
+                  </p>
+                </div>
+              </section>
+
+              <section className="student-form-section">
+                <div className="dashboard-section-header">
+                  <h2>Mark Attendance</h2>
+                  <p>Record attendance for a student and subject.</p>
+                </div>
+
+                <form
+                  className="student-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+
+                    setAttendanceSubmitting(true);
+                    setAttendanceMessage("");
+                    setAttendanceError("");
+
+                    try {
+                      await createAttendance({
+                        student_id: Number(attendanceStudentId),
+                        subject_id: Number(attendanceSubjectId),
+                        date: attendanceDate,
+                        status: attendanceStatus,
+                      });
+
+                      setAttendanceMessage(
+                        "Attendance marked successfully.",
+                      );
+
+                      const records = await getStudentAttendance(
+                        Number(attendanceStudentId),
+                      );
+
+                      setAttendanceRecords(records);
+                    } catch (error) {
+                      console.error("Attendance error:", error);
+
+                      setAttendanceError(
+                        error.response?.data?.detail ||
+                          "Failed to mark attendance",
+                      );
+                    } finally {
+                      setAttendanceSubmitting(false);
+                    }
+                  }}
+                >
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label htmlFor="attendance-student">
+                        Student
+                      </label>
+
+                      <select
+                        id="attendance-student"
+                        value={attendanceStudentId}
+                        onChange={async (event) => {
+                          const studentIdValue = event.target.value;
+
+                          setAttendanceStudentId(studentIdValue);
+                          setAttendanceRecords([]);
+                          setAttendanceError("");
+                          setAttendanceMessage("");
+
+                          if (!studentIdValue) {
+                            return;
+                          }
+
+                          setAttendanceLoading(true);
+
+                          try {
+                            const records = await getStudentAttendance(
+                              Number(studentIdValue),
+                            );
+
+                            setAttendanceRecords(records);
+                          } catch (error) {
+                            console.error(
+                              "Attendance history error:",
+                              error,
+                            );
+
+                            setAttendanceError(
+                              error.response?.data?.detail ||
+                                "Failed to load attendance",
+                            );
+                          } finally {
+                            setAttendanceLoading(false);
+                          }
+                        }}
+                        required
+                      >
+                        <option value="">Select a student</option>
+
+                        {students.map((student) => (
+                          <option key={student.id} value={student.id}>
+                            {student.name} ({student.student_id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="attendance-subject">
+                        Subject
+                      </label>
+
+                      <select
+                        id="attendance-subject"
+                        value={attendanceSubjectId}
+                        onChange={(event) =>
+                          setAttendanceSubjectId(event.target.value)
+                        }
+                        required
+                        disabled={subjectsLoading}
+                      >
+                        <option value="">
+                          {subjectsLoading
+                            ? "Loading subjects..."
+                            : "Select a subject"}
+                        </option>
+
+                        {subjects.map((subject) => (
+                          <option key={subject.id} value={subject.id}>
+                            {subject.code} — {subject.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="attendance-date">
+                        Date
+                      </label>
+
+                      <input
+                        id="attendance-date"
+                        type="date"
+                        value={attendanceDate}
+                        onChange={(event) =>
+                          setAttendanceDate(event.target.value)
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="attendance-status">
+                        Status
+                      </label>
+
+                      <select
+                        id="attendance-status"
+                        value={attendanceStatus}
+                        onChange={(event) =>
+                          setAttendanceStatus(event.target.value)
+                        }
+                      >
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-actions">
+                    <button
+                      type="submit"
+                      className="add-student-button"
+                      disabled={attendanceSubmitting}
+                    >
+                      {attendanceSubmitting
+                        ? "Saving..."
+                        : "Mark Attendance"}
+                    </button>
+                  </div>
+                </form>
+
+                {attendanceMessage && (
+                  <p className="success-message">{attendanceMessage}</p>
+                )}
+
+                {attendanceError && (
+                  <p className="error-message">{attendanceError}</p>
+                )}
+              </section>
+
+              <section className="student-form-section">
+                <div className="dashboard-section-header">
+                  <h2>Attendance History</h2>
+                  <p>
+                    {attendanceStudentId
+                      ? "Recent attendance records for the selected student."
+                      : "Select a student to view attendance history."}
+                  </p>
+                </div>
+
+                {attendanceLoading && (
+                  <p className="status-message">
+                    Loading attendance history...
+                  </p>
+                )}
+
+                {!attendanceLoading &&
+                  attendanceStudentId &&
+                  attendanceRecords.length === 0 && (
+                    <p className="status-message">
+                      No attendance records found for this student.
+                    </p>
+                  )}
+
+                {!attendanceLoading && attendanceRecords.length > 0 && (
+                  <div className="student-table-wrapper">
+                    <table className="student-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Subject</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {attendanceRecords.map((record) => (
+                          <tr key={record.id}>
+                            <td>{record.date}</td>
+                            <td>{record.subject}</td>
+                            <td>
+                              <span
+                                className={`status-badge ${
+                                  record.status.toLowerCase() === "present"
+                                    ? "status-badge-success"
+                                    : "status-badge-danger"
+                                }`}
+                              >
+                                {record.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </section>
+          )}
+
+          {activeSection === "assignments" && (
+          <section className="academic-management-page">
+            <section className="students-page-header">
+              <div>
+                <h2>Assignment Management</h2>
+                <p>
+                  Create assignments and review submission history by student.
+                </p>
+              </div>
+            </section>
+
+            <section className="student-form-section">
+              <div className="dashboard-section-header">
+                <h2>Create Assignment</h2>
+                <p>Record an assignment for a student and subject.</p>
+              </div>
+
+              <form
+                className="student-form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+
+                  setAssignmentSubmitting(true);
+                  setAssignmentMessage("");
+                  setAssignmentError("");
+
+                  try {
+                    await createAssignment({
+                      student_id: Number(assignmentStudentId),
+                      subject_id: Number(assignmentSubjectId),
+                      title: assignmentTitle,
+                      due_date: assignmentDueDate,
+                      submitted: assignmentSubmitted,
+                      score:
+                        assignmentScore === ""
+                          ? null
+                          : Number(assignmentScore),
+                    });
+
+                    setAssignmentMessage(
+                      "Assignment created successfully.",
+                    );
+
+                    const records = await getStudentAssignments(
+                      Number(assignmentStudentId),
+                    );
+
+                    setAssignmentRecords(records);
+                    setAssignmentTitle("");
+                    setAssignmentDueDate("");
+                    setAssignmentSubmitted(false);
+                    setAssignmentScore("");
+                  } catch (error) {
+                    console.error("Assignment error:", error);
+
+                    setAssignmentError(
+                      error.response?.data?.detail ||
+                        "Failed to create assignment",
+                    );
+                  } finally {
+                    setAssignmentSubmitting(false);
+                  }
+                }}
+              >
+                <div className="form-grid">
+                  <div className="form-field">
+                    <label htmlFor="assignment-student">
+                      Student
+                    </label>
+
+                    <select
+                      id="assignment-student"
+                      value={assignmentStudentId}
+                      onChange={async (event) => {
+                        const studentIdValue = event.target.value;
+
+                        setAssignmentStudentId(studentIdValue);
+                        setAssignmentRecords([]);
+                        setAssignmentError("");
+                        setAssignmentMessage("");
+
+                        if (!studentIdValue) {
+                          return;
+                        }
+
+                        setAssignmentLoading(true);
+
+                        try {
+                          const records =
+                            await getStudentAssignments(
+                              Number(studentIdValue),
+                            );
+
+                          setAssignmentRecords(records);
+                        } catch (error) {
+                          console.error(
+                            "Assignment history error:",
+                            error,
+                          );
+
+                          setAssignmentError(
+                            error.response?.data?.detail ||
+                              "Failed to load assignments",
+                          );
+                        } finally {
+                          setAssignmentLoading(false);
+                        }
+                      }}
+                      required
+                    >
+                      <option value="">Select a student</option>
+
+                      {students.map((student) => (
+                        <option
+                          key={student.id}
+                          value={student.id}
+                        >
+                          {student.name} ({student.student_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="assignment-subject">
+                      Subject
+                    </label>
+
+                    <select
+                      id="assignment-subject"
+                      value={assignmentSubjectId}
+                      onChange={(event) =>
+                        setAssignmentSubjectId(event.target.value)
+                      }
+                      required
+                      disabled={subjectsLoading}
+                    >
+                      <option value="">
+                        {subjectsLoading
+                          ? "Loading subjects..."
+                          : "Select a subject"}
+                      </option>
+
+                      {subjects.map((subject) => (
+                        <option
+                          key={subject.id}
+                          value={subject.id}
+                        >
+                          {subject.code} — {subject.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="assignment-title">
+                      Assignment Title
+                    </label>
+
+                    <input
+                      id="assignment-title"
+                      type="text"
+                      value={assignmentTitle}
+                      onChange={(event) =>
+                        setAssignmentTitle(event.target.value)
+                      }
+                      placeholder="e.g. Linked List Implementation"
+                      minLength={2}
+                      maxLength={200}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="assignment-due-date">
+                      Due Date
+                    </label>
+
+                    <input
+                      id="assignment-due-date"
+                      type="date"
+                      value={assignmentDueDate}
+                      onChange={(event) =>
+                        setAssignmentDueDate(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="assignment-score">
+                      Score
+                    </label>
+
+                    <input
+                      id="assignment-score"
+                      type="number"
+                      value={assignmentScore}
+                      onChange={(event) =>
+                        setAssignmentScore(event.target.value)
+                      }
+                      placeholder="Optional"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                  </div>
+
+                  <div className="form-field checkbox-field">
+                    <label htmlFor="assignment-submitted">
+                      Submitted
+                    </label>
+
+                    <input
+                      id="assignment-submitted"
+                      type="checkbox"
+                      checked={assignmentSubmitted}
+                      onChange={(event) =>
+                        setAssignmentSubmitted(event.target.checked)
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="add-student-button"
+                    disabled={assignmentSubmitting}
+                  >
+                    {assignmentSubmitting
+                      ? "Saving..."
+                      : "Create Assignment"}
+                  </button>
+                </div>
+              </form>
+
+              {assignmentMessage && (
+                <p className="success-message">
+                  {assignmentMessage}
+                </p>
+              )}
+
+              {assignmentError && (
+                <p className="error-message">
+                  {assignmentError}
+                </p>
+              )}
+            </section>
+
+            <section className="student-form-section">
+              <div className="dashboard-section-header">
+                <h2>Assignment History</h2>
+                <p>
+                  {assignmentStudentId
+                    ? "Assignment records for the selected student."
+                    : "Select a student to view assignment history."}
+                </p>
+              </div>
+
+              {assignmentLoading && (
+                <p className="status-message">
+                  Loading assignment history...
+                </p>
+              )}
+
+              {!assignmentLoading &&
+                assignmentStudentId &&
+                assignmentRecords.length === 0 && (
+                  <p className="status-message">
+                    No assignments found for this student.
+                  </p>
+                )}
+
+              {!assignmentLoading &&
+                assignmentRecords.length > 0 && (
+                  <div className="student-table-wrapper">
+                    <table className="student-table">
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Subject</th>
+                          <th>Due Date</th>
+                          <th>Submitted</th>
+                          <th>Score</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {assignmentRecords.map((record) => (
+                          <tr key={record.id}>
+                            <td>{record.title}</td>
+                            <td>{record.subject}</td>
+                            <td>{record.due_date}</td>
+                            <td>
+                              {record.submitted
+                                ? "Yes"
+                                : "No"}
+                            </td>
+                            <td>
+                              {record.score !== null &&
+                              record.score !== undefined
+                                ? record.score
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+            </section>
+          </section>
+        )}
+
+        {activeSection === "exams" && (
+          <section className="academic-management-page">
+            <section className="students-page-header">
+              <div>
+                <h2>Exam Management</h2>
+                <p>
+                  Record exam results and review performance by student.
+                </p>
+              </div>
+            </section>
+
+            <section className="student-form-section">
+              <div className="dashboard-section-header">
+                <h2>Record Exam Result</h2>
+                <p>Record an exam score for a student and subject.</p>
+              </div>
+
+              <form
+                className="student-form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+
+                  setExamSubmitting(true);
+                  setExamMessage("");
+                  setExamError("");
+
+                  try {
+                    await createExam({
+                      student_id: Number(examStudentId),
+                      subject_id: Number(examSubjectId),
+                      exam_type: examType,
+                      exam_date: examDate,
+                      score: Number(examScore),
+                    });
+
+                    setExamMessage(
+                      "Exam result recorded successfully.",
+                    );
+
+                    const records = await getStudentExams(
+                      Number(examStudentId),
+                    );
+
+                    setExamRecords(records);
+                    setExamType("");
+                    setExamDate("");
+                    setExamScore("");
+                  } catch (error) {
+                    console.error("Exam error:", error);
+
+                    setExamError(
+                      error.response?.data?.detail ||
+                        "Failed to record exam result",
+                    );
+                  } finally {
+                    setExamSubmitting(false);
+                  }
+                }}
+              >
+                <div className="form-grid">
+                  <div className="form-field">
+                    <label htmlFor="exam-student">
+                      Student
+                    </label>
+
+                    <select
+                      id="exam-student"
+                      value={examStudentId}
+                      onChange={async (event) => {
+                        const studentIdValue = event.target.value;
+
+                        setExamStudentId(studentIdValue);
+                        setExamRecords([]);
+                        setExamError("");
+                        setExamMessage("");
+
+                        if (!studentIdValue) {
+                          return;
+                        }
+
+                        setExamLoading(true);
+
+                        try {
+                          const records = await getStudentExams(
+                            Number(studentIdValue),
+                          );
+
+                          setExamRecords(records);
+                        } catch (error) {
+                          console.error(
+                            "Exam history error:",
+                            error,
+                          );
+
+                          setExamError(
+                            error.response?.data?.detail ||
+                              "Failed to load exam history",
+                          );
+                        } finally {
+                          setExamLoading(false);
+                        }
+                      }}
+                      required
+                    >
+                      <option value="">Select a student</option>
+
+                      {students.map((student) => (
+                        <option
+                          key={student.id}
+                          value={student.id}
+                        >
+                          {student.name} ({student.student_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="exam-subject">
+                      Subject
+                    </label>
+
+                    <select
+                      id="exam-subject"
+                      value={examSubjectId}
+                      onChange={(event) =>
+                        setExamSubjectId(event.target.value)
+                      }
+                      required
+                      disabled={subjectsLoading}
+                    >
+                      <option value="">
+                        {subjectsLoading
+                          ? "Loading subjects..."
+                          : "Select a subject"}
+                      </option>
+
+                      {subjects.map((subject) => (
+                        <option
+                          key={subject.id}
+                          value={subject.id}
+                        >
+                          {subject.code} — {subject.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="exam-type">
+                      Exam Type
+                    </label>
+
+                    <input
+                      id="exam-type"
+                      type="text"
+                      value={examType}
+                      onChange={(event) =>
+                        setExamType(event.target.value)
+                      }
+                      placeholder="e.g. Midterm"
+                      minLength={2}
+                      maxLength={50}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="exam-date">
+                      Exam Date
+                    </label>
+
+                    <input
+                      id="exam-date"
+                      type="date"
+                      value={examDate}
+                      onChange={(event) =>
+                        setExamDate(event.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="exam-score">
+                      Score
+                    </label>
+
+                    <input
+                      id="exam-score"
+                      type="number"
+                      value={examScore}
+                      onChange={(event) =>
+                        setExamScore(event.target.value)
+                      }
+                      placeholder="0 - 100"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="add-student-button"
+                    disabled={examSubmitting}
+                  >
+                    {examSubmitting
+                      ? "Saving..."
+                      : "Record Exam Result"}
+                  </button>
+                </div>
+              </form>
+
+              {examMessage && (
+                <p className="success-message">
+                  {examMessage}
+                </p>
+              )}
+
+              {examError && (
+                <p className="error-message">
+                  {examError}
+                </p>
+              )}
+            </section>
+
+            <section className="student-form-section">
+              <div className="dashboard-section-header">
+                <h2>Exam History</h2>
+                <p>
+                  {examStudentId
+                    ? "Exam results for the selected student."
+                    : "Select a student to view exam history."}
+                </p>
+              </div>
+
+              {examLoading && (
+                <p className="status-message">
+                  Loading exam history...
+                </p>
+              )}
+
+              {!examLoading &&
+                examStudentId &&
+                examRecords.length === 0 && (
+                  <p className="status-message">
+                    No exam records found for this student.
+                  </p>
+                )}
+
+              {!examLoading && examRecords.length > 0 && (
+                <div className="student-table-wrapper">
+                  <table className="student-table">
+                    <thead>
+                      <tr>
+                        <th>Subject</th>
+                        <th>Exam Type</th>
+                        <th>Exam Date</th>
+                        <th>Score</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {examRecords.map((record) => (
+                        <tr key={record.id}>
+                          <td>{record.subject}</td>
+                          <td>{record.exam_type}</td>
+                          <td>{record.exam_date}</td>
+                          <td>{record.score}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </section>
+        )}
+
+        {activeSection === "recommendations" && (
             <section className="section-card">
               <div className="section-header">
                 <div>
