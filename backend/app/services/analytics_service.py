@@ -1,114 +1,78 @@
 from sqlalchemy.orm import Session
 
-from app.models.attendance import Attendance
-from app.models.assignment import Assignment
-from app.models.exam import Exam
+from app.ml.feature_builder import build_student_features
 from app.services.academic_validation import validate_student_exists
 
 
 def get_student_analytics(db: Session, student_id: int):
-    # Make sure the student exists
     validate_student_exists(db, student_id)
 
-    # -------------------------
-    # Attendance
-    # -------------------------
-    attendance_records = (
-        db.query(Attendance)
-        .filter(Attendance.student_id == student_id)
-        .all()
+    feature_rows = build_student_features(db)
+
+    features = next(
+        (
+            row
+            for row in feature_rows
+            if row["student_id"] == student_id
+        ),
+        None,
     )
 
-    total_attendance = len(attendance_records)
+    if features is None:
+        return {
+            "student_id": student_id,
+            "attendance_percentage": 0,
+            "assignment_completion_rate": 0,
+            "assignment_average_score": 0,
+            "average_exam_score": 0,
+            "recent_exam_score": 0,
+            "exam_score_trend": 0,
+            "academic_consistency": 0,
+            "engagement_score": 0,
+            "academic_health_score": 0,
+            "risk_level": "No Data",
+        }
 
-    present_count = sum(
-        1
-        for record in attendance_records
-        if record.status.lower() == "present"
-    )
+    # Preserve the existing rule-based risk indicator.
+    has_attendance_data = features["attendance_percentage"] > 0
+    has_assignment_data = features["assignment_completion_rate"] > 0
+    has_exam_data = features.get("has_exam_data", False)
 
-    attendance_percentage = (
-        (present_count / total_attendance) * 100
-        if total_attendance > 0
-        else 0
-    )
-
-    # -------------------------
-    # Assignments
-    # -------------------------
-    assignments = (
-        db.query(Assignment)
-        .filter(Assignment.student_id == student_id)
-        .all()
-    )
-
-    total_assignments = len(assignments)
-
-    submitted_assignments = sum(
-        1
-        for assignment in assignments
-        if assignment.submitted
-    )
-
-    assignment_completion_rate = (
-        (submitted_assignments / total_assignments) * 100
-        if total_assignments > 0
-        else 0
-    )
-
-    # -------------------------
-    # Exams
-    # -------------------------
-    exams = (
-        db.query(Exam)
-        .filter(Exam.student_id == student_id)
-        .all()
-    )
-
-    average_exam_score = (
-        sum(exam.score for exam in exams) / len(exams)
-        if exams
-        else 0
-    )
-
-    # -------------------------
-    # Risk Level
-    # -------------------------
-    has_attendance_data = total_attendance > 0
-    has_assignment_data = total_assignments > 0
-    has_exam_data = len(exams) > 0
-
-    has_any_academic_data = (
+    if not (
         has_attendance_data
         or has_assignment_data
         or has_exam_data
-    )
-
-    if not has_any_academic_data:
+    ):
         risk_level = "No Data"
 
     elif (
-        (has_attendance_data and attendance_percentage < 60)
+        (
+            has_attendance_data
+            and features["attendance_percentage"] < 60
+        )
         or (
             has_assignment_data
-            and assignment_completion_rate < 60
+            and features["assignment_completion_rate"] < 60
         )
         or (
             has_exam_data
-            and average_exam_score < 50
+            and features["average_exam_score"] < 50
         )
     ):
         risk_level = "High"
 
     elif (
-        (has_attendance_data and attendance_percentage < 75)
+        (
+            has_attendance_data
+            and features["attendance_percentage"] < 75
+        )
         or (
             has_assignment_data
-            and assignment_completion_rate < 75
+            and features["assignment_completion_rate"] < 75
         )
         or (
             has_exam_data
-            and average_exam_score < 65
+            and features["average_exam_score"] < 65
         )
     ):
         risk_level = "Medium"
@@ -116,22 +80,34 @@ def get_student_analytics(db: Session, student_id: int):
     else:
         risk_level = "Low"
 
-    # -------------------------
-    # Return Analytics
-    # -------------------------
     return {
         "student_id": student_id,
-        "attendance_percentage": round(
-            attendance_percentage,
-            2
-        ),
-        "assignment_completion_rate": round(
-            assignment_completion_rate,
-            2
-        ),
-        "average_exam_score": round(
-            average_exam_score,
-            2
-        ),
-        "risk_level": risk_level
+        "attendance_percentage": features[
+            "attendance_percentage"
+        ],
+        "assignment_completion_rate": features[
+            "assignment_completion_rate"
+        ],
+        "assignment_average_score": features[
+            "average_assignment_score"
+        ],
+        "average_exam_score": features[
+            "average_exam_score"
+        ],
+        "recent_exam_score": features[
+            "recent_exam_score"
+        ],
+        "exam_score_trend": features[
+            "exam_score_trend"
+        ],
+        "academic_consistency": features[
+            "academic_consistency"
+        ],
+        "engagement_score": features[
+            "engagement_score"
+        ],
+        "academic_health_score": features[
+            "academic_health_score"
+        ],
+        "risk_level": risk_level,
     }

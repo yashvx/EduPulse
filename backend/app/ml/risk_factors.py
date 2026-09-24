@@ -16,6 +16,23 @@ def analyze_risk_factors(features: dict) -> list[dict]:
     internal_score = features["average_internal_score"]
     exam_score = features["average_exam_score"]
 
+    has_assignment_score_data = features.get(
+        "has_assignment_score_data",
+        assignment_score > 0,
+    )
+    has_quiz_data = features.get(
+        "has_quiz_data",
+        quiz_score > 0,
+    )
+    has_internal_data = features.get(
+        "has_internal_data",
+        internal_score > 0,
+    )
+    has_exam_data = features.get(
+        "has_exam_data",
+        exam_score > 0,
+    )
+
     # -------------------------
     # Attendance
     # -------------------------
@@ -66,7 +83,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
     # Assignment performance
     # -------------------------
 
-    if assignment_score < 50:
+    if has_assignment_score_data and assignment_score < 50:
         factors.append(
             {
                 "factor": "Assignment Performance",
@@ -75,7 +92,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
                 "message": "Assignment scores are significantly below average.",
             }
         )
-    elif assignment_score < 65:
+    elif has_assignment_score_data and assignment_score < 65:
         factors.append(
             {
                 "factor": "Assignment Performance",
@@ -89,7 +106,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
     # Quiz performance
     # -------------------------
 
-    if quiz_score < 50:
+    if has_quiz_data and quiz_score < 50:
         factors.append(
             {
                 "factor": "Quiz Performance",
@@ -98,7 +115,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
                 "message": "Quiz performance is significantly below average.",
             }
         )
-    elif quiz_score < 65:
+    elif has_quiz_data and quiz_score < 65:
         factors.append(
             {
                 "factor": "Quiz Performance",
@@ -112,7 +129,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
     # Internal assessment
     # -------------------------
 
-    if internal_score < 50:
+    if has_internal_data and internal_score < 50:
         factors.append(
             {
                 "factor": "Internal Assessment",
@@ -121,7 +138,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
                 "message": "Internal assessment performance is critically low.",
             }
         )
-    elif internal_score < 65:
+    elif has_internal_data and internal_score < 65:
         factors.append(
             {
                 "factor": "Internal Assessment",
@@ -135,7 +152,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
     # Exam performance
     # -------------------------
 
-    if exam_score < 50:
+    if has_exam_data and exam_score < 50:
         factors.append(
             {
                 "factor": "Exam Performance",
@@ -144,7 +161,7 @@ def analyze_risk_factors(features: dict) -> list[dict]:
                 "message": "Exam performance is significantly below average.",
             }
         )
-    elif exam_score < 65:
+    elif has_exam_data and exam_score < 65:
         factors.append(
             {
                 "factor": "Exam Performance",
