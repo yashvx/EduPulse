@@ -1430,6 +1430,56 @@ const [examMessage, setExamMessage] = useState("");
                             </div>
 
                             <div className="profile-metric-card">
+                              <span>Assignment Average</span>
+                              <strong>
+                                {studentAnalytics.assignment_average_score}
+                              </strong>
+                              <small>Average assignment score</small>
+                            </div>
+
+                            <div className="profile-metric-card">
+                              <span>Recent Exam</span>
+                              <strong>
+                                {studentAnalytics.recent_exam_score}
+                              </strong>
+                              <small>Most recent exam score</small>
+                            </div>
+
+                            <div className="profile-metric-card">
+                              <span>Exam Trend</span>
+                              <strong>
+                                {studentAnalytics.exam_score_trend > 0
+                                  ? `+${studentAnalytics.exam_score_trend}`
+                                  : studentAnalytics.exam_score_trend}
+                              </strong>
+                              <small>Change from previous exam</small>
+                            </div>
+
+                            <div className="profile-metric-card">
+                              <span>Consistency</span>
+                              <strong>
+                                {studentAnalytics.academic_consistency}%
+                              </strong>
+                              <small>Academic score consistency</small>
+                            </div>
+
+                            <div className="profile-metric-card">
+                              <span>Engagement</span>
+                              <strong>
+                                {studentAnalytics.engagement_score}%
+                              </strong>
+                              <small>Academic engagement score</small>
+                            </div>
+
+                            <div className="profile-metric-card">
+                              <span>Academic Health</span>
+                              <strong>
+                                {studentAnalytics.academic_health_score}%
+                              </strong>
+                              <small>Overall academic health</small>
+                            </div>
+
+                            <div className="profile-metric-card">
                               <span>Risk Level</span>
                               <strong className="profile-risk-value">
                                 {studentAnalytics.risk_level}
@@ -1858,6 +1908,62 @@ const [examMessage, setExamMessage] = useState("");
                             </div>
                             <div className="performance-card-value">
                               {studentAnalytics.average_exam_score}
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Assignment Average
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.assignment_average_score}
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Recent Exam
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.recent_exam_score}
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Exam Trend
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.exam_score_trend > 0
+                                ? `+${studentAnalytics.exam_score_trend}`
+                                : studentAnalytics.exam_score_trend}
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Consistency
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.academic_consistency}%
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Engagement
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.engagement_score}%
+                            </div>
+                          </div>
+
+                          <div className="performance-card">
+                            <div className="performance-card-label">
+                              Academic Health
+                            </div>
+                            <div className="performance-card-value">
+                              {studentAnalytics.academic_health_score}%
                             </div>
                           </div>
 
